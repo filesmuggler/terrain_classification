@@ -5,15 +5,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
+from mpl_toolkits.mplot3d import Axes3D
+import colorsys
 
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import confusion_matrix
+from sklearn import decomposition
 
 
 def dump_data():
@@ -30,6 +28,53 @@ def visualize_signal(signals, labels):
         df.plot()
         plt.title(lab)
         plt.show()
+
+def colored_labels(y):
+    N = 9
+    HSV_tuples = [(x * 1.0 / N, 0.5, 0.5) for x in range(N)]
+    distinct_colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples))
+
+    y_rgb = list()
+    cnt = 0
+    y_copy = []
+    for i in range(len(y)):
+        if i > 0 and y[i] not in y_copy:
+            cnt += 1
+        y_rgb.append(distinct_colors[cnt])
+        y_copy.append(y[i])
+
+    c = np.asarray(y_rgb) / np.max(y_rgb)
+    return c
+
+def pca(data: np.ndarray, labels: np.ndarray):
+    X = data.copy()
+    y = labels.copy()
+    n_components = 3
+
+    fig = plt.figure(1, figsize=(20, 13))
+    plt.clf()
+    ax = Axes3D(fig, rect=[0, 0, .9, 0.9], elev=50, azim=45)
+    plt.cla()
+
+    pca = decomposition.PCA(n_components=n_components)
+    pca.fit(X)
+    x = pca.transform(X)
+    c = colored_labels(y)
+
+    _, class_idxs, class_cnts = np.unique(labels, return_index=True, return_counts=True)
+    for start, size in zip(class_idxs, class_cnts):
+        stop = start + size
+        colors = c[start:stop, :]
+        ax.scatter(x[start:stop, 0], x[start:stop, 1], x[start:stop, 2], c=colors, cmap='Dark2', s=150, edgecolors='k',
+                   label=labels[start])
+
+    ax.legend(loc="best", title="Classes", fontsize="x-large", title_fontsize="x-large")
+    ax.set_xlabel("PCA1")
+    ax.set_ylabel("PCA2")
+    ax.set_zlabel("PCA3")
+    ax.grid(True)
+    plt.show()
+    #plt.savefig('./images/pca.png', bbox_inches='tight')
 
 def preprocess_data(data):
     # filter data
@@ -82,6 +127,7 @@ def create_models():
     #models.append(("KNeighbors", KNeighborsClassifier()))
     models.append(("RandomForest", RandomForestClassifier(n_estimators=100, criterion='gini',
                                 max_depth=10, random_state=0, max_features=None)))
+    models.append(("RandomForestRegressor",RandomForestRegressor(n_estimators=1000)))
 
     return models
 
@@ -101,15 +147,24 @@ def run_experiments(dataset,models):
         results.append((conf_mat,model_score))
 
     for i in range(len(names)):
-        print(names[i], results[i])
+        print(names[i])
+        print(results[i])
+        print("\n")
+
+
 
 def main():
     #dump_data()
     roku = read_roku()
     X_train,y_train, X_test,y_test = preprocess_data(roku)
-    dataset = X_train, y_train, X_test, y_test
-    models = create_models()
-    run_experiments(dataset,models)
+    print(np.unique(y_train))
+    a = np.array(y_train)
+    unique, counts = np.unique(a, return_counts=True)
+    print(dict(zip(unique, counts)))
+    # dataset = X_train, y_train, X_test, y_test
+    # models = create_models()
+    # run_experiments(dataset,models)
+    pca(X_train,y_train)
 
 if __name__ == "__main__":
     main()
