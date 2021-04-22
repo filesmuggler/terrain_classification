@@ -8,10 +8,13 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import colorsys
 
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn import decomposition
+
+import seaborn as sn
 
 
 def dump_data():
@@ -123,48 +126,42 @@ def read_roku():
 def create_models():
     models = []
 
-    #models.append(("SVC", SVC()))
-    #models.append(("KNeighbors", KNeighborsClassifier()))
-    models.append(("RandomForest", RandomForestClassifier(n_estimators=100, criterion='gini',
-                                max_depth=10, random_state=0, max_features=None)))
-    models.append(("RandomForestRegressor",RandomForestRegressor(n_estimators=1000)))
+    models.append(("SVC", SVC()))
+    models.append(("KNeighborsClassifier", KNeighborsClassifier()))
+    # models.append(("KNeighborsRegressor", KNeighborsRegressor()))
+    models.append(("RandomForest", RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42, max_features=None)))
+    models.append(("RandomForestRegressor",RandomForestRegressor(n_estimators=100)))
 
     return models
 
 def run_experiments(dataset,models):
     X_train, y_train, X_test, y_test = dataset
 
-    results = []
-    names = []
-
     for name, model in models:
-        names.append(name)
+        print("processing ",name)
         model.fit(X_train,y_train)
         y_pred = model.predict(X_test)
         # evaluate model
         conf_mat = confusion_matrix(y_test,y_pred)
-        model_score = model.score(X_test,y_test)
-        results.append((conf_mat,model_score))
+        acc = accuracy_score(y_test, y_pred, normalize=True)
 
-    for i in range(len(names)):
-        print(names[i])
-        print(results[i])
-        print("\n")
+        df_cm = pd.DataFrame(conf_mat, index=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']],
+                             columns=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']])
+        plt.figure(figsize=(9, 7))
+        sns_conf_mat = sn.heatmap(df_cm, annot=True)
+        print(acc)
+        sns_conf_mat.set_title(str(name)+" accuracy_score: " + str(acc))
 
-
+        sns_conf_mat.figure.savefig(str(name)+".png")
+        print("processed ",name)
 
 def main():
     #dump_data()
     roku = read_roku()
     X_train,y_train, X_test,y_test = preprocess_data(roku)
-    print(np.unique(y_train))
-    a = np.array(y_train)
-    unique, counts = np.unique(a, return_counts=True)
-    print(dict(zip(unique, counts)))
-    # dataset = X_train, y_train, X_test, y_test
-    # models = create_models()
-    # run_experiments(dataset,models)
-    pca(X_train,y_train)
+    dataset = X_train, y_train, X_test, y_test
+    models = create_models()
+    run_experiments(dataset,models)
 
 if __name__ == "__main__":
     main()
