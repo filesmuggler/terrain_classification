@@ -5,11 +5,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sklearn.ensemble import RandomForestClassifier
-
 from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import confusion_matrix
 
 
 def dump_data():
@@ -20,6 +24,12 @@ def dump_data():
     filehandler.close()
     print("dumped roku")
 
+def visualize_signal(signals, labels):
+    for sig,lab in zip(signals,labels):
+        df = pd.DataFrame(sig, columns=['fx', 'fy', 'fz', 'tx', 'ty', 'tz'])
+        df.plot()
+        plt.title(lab)
+        plt.show()
 
 def preprocess_data(data):
     # filter data
@@ -63,31 +73,43 @@ def preprocess_data(data):
 
 def read_roku():
     roku = pd.read_pickle("./data/rokubimini.pickle")
-
-    # for sig,lab in zip(signals_train,labels_train):
-    #     df = pd.DataFrame(sig, columns=['fx', 'fy', 'fz', 'tx', 'ty', 'tz'])
-    #     df.plot()
-    #     plt.title(lab)
-    #     plt.show()
-    #
     return roku
 
+def create_models():
+    models = []
 
+    #models.append(("SVC", SVC()))
+    #models.append(("KNeighbors", KNeighborsClassifier()))
+    models.append(("RandomForest", RandomForestClassifier(n_estimators=100, criterion='gini',
+                                max_depth=10, random_state=0, max_features=None)))
 
+    return models
 
+def run_experiments(dataset,models):
+    X_train, y_train, X_test, y_test = dataset
+
+    results = []
+    names = []
+
+    for name, model in models:
+        names.append(name)
+        model.fit(X_train,y_train)
+        y_pred = model.predict(X_test)
+        # evaluate model
+        conf_mat = confusion_matrix(y_test,y_pred)
+        model_score = model.score(X_test,y_test)
+        results.append((conf_mat,model_score))
+
+    for i in range(len(names)):
+        print(names[i], results[i])
 
 def main():
     #dump_data()
     roku = read_roku()
     X_train,y_train, X_test,y_test = preprocess_data(roku)
-    # pipe = Pipeline([('scaler', StandardScaler()), ('svc', SVC())])
-    # pipe.fit(X_train, y_train)
-    #
-    # print(pipe.score(X_test, y_test))
-    clf = RandomForestClassifier(max_depth=100, random_state=69)
-    clf.fit(X_train, y_train)
-
-    print(clf.score(X_test,y_test))
+    dataset = X_train, y_train, X_test, y_test
+    models = create_models()
+    run_experiments(dataset,models)
 
 if __name__ == "__main__":
     main()
