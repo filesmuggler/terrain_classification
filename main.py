@@ -13,6 +13,7 @@ from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn import decomposition
+from sklearn.model_selection import cross_val_score
 
 import seaborn as sn
 
@@ -102,6 +103,15 @@ def preprocess_data(data):
     signals_val_norm = [sig for sig_idx, sig in enumerate(signals_val_norm) if sig_idx in idx_out]
     labels_val = [label for label_idx, label in enumerate(labels_val) if label_idx in idx_out]
 
+    # remove unknown terrain (class -1)
+    labels_idx_out = [label_idx for label_idx, label in enumerate(labels_train) if label == -1]
+    signals_train_norm = [sig for sig_idx, sig in enumerate(signals_train_norm) if sig_idx not in labels_idx_out]
+    labels_train = [label for label_idx, label in enumerate(labels_train) if label_idx not in labels_idx_out]
+
+    labels_idx_out = [label_idx for label_idx, label in enumerate(labels_val) if label == -1]
+    signals_val_norm = [sig for sig_idx, sig in enumerate(signals_val_norm) if sig_idx not in labels_idx_out]
+    labels_val = [label for label_idx, label in enumerate(labels_val) if label_idx not in labels_idx_out]
+
     # pad every signal to 1000
     signals_train_padded = []
     for sig in signals_train_norm:
@@ -128,9 +138,7 @@ def create_models():
 
     models.append(("SVC", SVC()))
     models.append(("KNeighborsClassifier", KNeighborsClassifier()))
-    # models.append(("KNeighborsRegressor", KNeighborsRegressor()))
     models.append(("RandomForest", RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42, max_features=None)))
-    models.append(("RandomForestRegressor",RandomForestRegressor(n_estimators=100)))
 
     return models
 
@@ -140,19 +148,23 @@ def run_experiments(dataset,models):
     for name, model in models:
         print("processing ",name)
         model.fit(X_train,y_train)
-        y_pred = model.predict(X_test)
-        # evaluate model
-        conf_mat = confusion_matrix(y_test,y_pred)
-        acc = accuracy_score(y_test, y_pred, normalize=True)
+        # y_pred = model.predict(X_test)
 
-        df_cm = pd.DataFrame(conf_mat, index=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']],
-                             columns=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']])
-        plt.figure(figsize=(9, 7))
-        sns_conf_mat = sn.heatmap(df_cm, annot=True)
-        print(acc)
-        sns_conf_mat.set_title(str(name)+" accuracy_score: " + str(acc))
 
-        sns_conf_mat.figure.savefig(str(name)+".png")
+        # acc = accuracy_score(y_test, y_pred, normalize=True)
+        scores = cross_val_score(model,X_train,y_train,cv=5,scoring='accuracy')
+        print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+
+        ## CONFUSION MATRIX
+        # conf_mat = confusion_matrix(y_test,y_pred)
+        # df_cm = pd.DataFrame(conf_mat, index=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']],
+        #                      columns=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']])
+        # plt.figure(figsize=(9, 7))
+        # sns_conf_mat = sn.heatmap(df_cm, annot=True)
+        # print(acc)
+        # sns_conf_mat.set_title(str(name)+" accuracy_score: " + str(acc))
+        #
+        # sns_conf_mat.figure.savefig(str(name)+".png")
         print("processed ",name)
 
 def main():
