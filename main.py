@@ -148,23 +148,22 @@ def run_experiments(dataset,models):
     for name, model in models:
         print("processing ",name)
         model.fit(X_train,y_train)
-        # y_pred = model.predict(X_test)
-
-
-        # acc = accuracy_score(y_test, y_pred, normalize=True)
+        print("training finished")
+        print("evaluating model...")
         scores = cross_val_score(model,X_train,y_train,cv=5,scoring='accuracy')
         print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
-
         ## CONFUSION MATRIX
-        # conf_mat = confusion_matrix(y_test,y_pred)
-        # df_cm = pd.DataFrame(conf_mat, index=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']],
-        #                      columns=[i for i in ['-1', '0', '1', '2', '3', '4', '5', '6', '7']])
-        # plt.figure(figsize=(9, 7))
-        # sns_conf_mat = sn.heatmap(df_cm, annot=True)
-        # print(acc)
-        # sns_conf_mat.set_title(str(name)+" accuracy_score: " + str(acc))
-        #
-        # sns_conf_mat.figure.savefig(str(name)+".png")
+        y_pred = model.predict(X_test)
+        acc = accuracy_score(y_test, y_pred, normalize=True)
+        conf_mat = confusion_matrix(y_test,y_pred)
+        df_cm = pd.DataFrame(conf_mat, index=[i for i in ['0', '1', '2', '3', '4', '5', '6', '7']],
+                             columns=[i for i in ['0', '1', '2', '3', '4', '5', '6', '7']])
+        plt.figure(figsize=(9, 7))
+        sns_conf_mat = sn.heatmap(df_cm, annot=True)
+        print(acc)
+        sns_conf_mat.set_title(str(name)+" acc_score: " + str(round(acc,2)) + ", cross_val_score (acc mean, acc std):"+str(round(scores.mean(),2))+", "+str(round(scores.std(),2)))
+
+        sns_conf_mat.figure.savefig(str(name)+"_2.png")
         print("processed ",name)
 
 def main():
