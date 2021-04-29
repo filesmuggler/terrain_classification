@@ -142,28 +142,41 @@ def create_models():
 
     return models
 
+def train_models(dataset,models):
+    X_train, y_train, X_test, y_test = dataset
+    # save the model to disk
+    for name, model in models:
+        print("training ",name)
+        model.fit(X_train,y_train)
+        filename = name+'.pkl'
+        pickle.dump(model, open(filename, 'wb'))
+
+
 def run_experiments(dataset,models):
     X_train, y_train, X_test, y_test = dataset
-
     for name, model in models:
-        print("processing ",name)
+        print("training ",name)
         model.fit(X_train,y_train)
-        print("training finished")
+        filename = name + '.pkl'
+        pickle.dump(model, open(filename, 'wb'))
+        print("training finished, model saved")
         print("evaluating model...")
-        scores = cross_val_score(model,X_train,y_train,cv=5,scoring='accuracy')
-        print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
-        ## CONFUSION MATRIX
-        y_pred = model.predict(X_test)
-        acc = accuracy_score(y_test, y_pred, normalize=True)
-        conf_mat = confusion_matrix(y_test,y_pred)
-        df_cm = pd.DataFrame(conf_mat, index=[i for i in ['0', '1', '2', '3', '4', '5', '6', '7']],
-                             columns=[i for i in ['0', '1', '2', '3', '4', '5', '6', '7']])
-        plt.figure(figsize=(9, 7))
-        sns_conf_mat = sn.heatmap(df_cm, annot=True)
-        print(acc)
-        sns_conf_mat.set_title(str(name)+" acc_score: " + str(round(acc,2)) + ", cross_val_score (acc mean, acc std):"+str(round(scores.mean(),2))+", "+str(round(scores.std(),2)))
 
-        sns_conf_mat.figure.savefig(str(name)+"_2.png")
+        # MODEL EVAL
+        scores = cross_val_score(model,X_train,y_train,cv=5,scoring='accuracy')
+
+        y_pred = model.predict(X_test)
+
+        acc = accuracy_score(y_test, y_pred, normalize=True)
+        conf_mat = confusion_matrix(y_test,y_pred,normalize='true')
+        df_cm = pd.DataFrame(conf_mat, index=[i for i in ['Art. Grass', 'Gum', 'Carpet', 'PVC', 'Ceramic tiles', 'Foam', 'Sand', 'Rock']],
+                             columns=[i for i in ['Art. Grass', 'Gum', 'Carpet', 'PVC', 'Ceramic tiles', 'Foam', 'Sand', 'Rock']])
+        plt.figure(figsize=(9, 7))
+        sns_conf_mat = sn.heatmap(df_cm, annot=True, cmap='Blues')
+
+        sns_conf_mat.set_title(str(name)+" acc score: " + str(round(acc,2)) + ", cross_val_score (acc mean, acc std):("+str(round(scores.mean(),2))+", "+str(round(scores.std(),2))+')')
+
+        sns_conf_mat.figure.savefig(str(name)+".png")
         print("processed ",name)
 
 def main():
