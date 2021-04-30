@@ -14,9 +14,9 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn import decomposition
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
 
 import seaborn as sn
-
 
 def dump_data():
     experiment_data = pd.read_pickle("./data/haptic_geometry_dataset.pickle")
@@ -135,10 +135,22 @@ def read_roku():
 
 def create_models():
     models = []
+    # kernels = ['poly']
+    # gammas = [0.1, 1, 10, 100]
+    # cs = [0.1, 1, 10, 100, 1000]
+    # degrees = [0, 1, 2, 3, 4, 5, 6]
 
-    models.append(("SVC", SVC()))
-    models.append(("KNeighborsClassifier", KNeighborsClassifier()))
-    models.append(("RandomForest", RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42, max_features=None)))
+    #models.append(("SVC", SVC()))
+    # for k in kernels:
+    #     for c in cs:
+    #         name = "SVC_k_"+str(k)+"_c_"+str(c)
+    #         models.append((name, SVC(kernel=k,C=c)))
+    # List Hyperparameters that we want to tune.
+
+
+
+    # models.append(("KNeighborsClassifier", KNeighborsClassifier()))
+    # models.append(("RandomForest", RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42, max_features=None)))
 
     return models
 
@@ -151,6 +163,18 @@ def train_models(dataset,models):
         filename = name+'.pkl'
         pickle.dump(model, open(filename, 'wb'))
 
+def grid_search(dataset):
+    X_train, y_train, X_test, y_test = dataset
+    leaf_size = list(range(1, 50))
+    n_neighbors = list(range(1, 30))
+    p = [1, 2]  # Convert to dictionary
+    hyperparameters = dict(leaf_size=leaf_size, n_neighbors=n_neighbors, p=p)  # Create new KNN object
+    knn_2 = KNeighborsClassifier()  # Use GridSearch
+    clf = GridSearchCV(knn_2, hyperparameters, cv=10)  # Fit the model
+    best_model = clf.fit(X_train, y_train)  # Print The value of best Hyperparameters
+    print('Best leaf_size:', best_model.best_estimator_.get_params()['leaf_size'])
+    print('Best p:', best_model.best_estimator_.get_params()['p'])
+    print('Best n_neighbors:', best_model.best_estimator_.get_params()['n_neighbors'])
 
 def run_experiments(dataset,models):
     X_train, y_train, X_test, y_test = dataset
@@ -184,8 +208,9 @@ def main():
     roku = read_roku()
     X_train,y_train, X_test,y_test = preprocess_data(roku)
     dataset = X_train, y_train, X_test, y_test
-    models = create_models()
-    run_experiments(dataset,models)
+    # models = create_models()
+    # run_experiments(dataset,models)
+    grid_search(dataset)
 
 if __name__ == "__main__":
     main()
